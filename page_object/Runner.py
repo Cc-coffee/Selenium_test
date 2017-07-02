@@ -1,7 +1,8 @@
 # -*- utf-8 -*-
 import unittest
-from Tests_case import Tests
-import HTMLTestRunner
+
+from page_object import HTMLTestRunner
+from page_object.Tests_case import Tests
 
 
 class TestRunner():

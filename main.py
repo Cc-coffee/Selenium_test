@@ -4,6 +4,10 @@ import time
 import pytesseract
 from selenium import webdriver
 from PIL import Image, ImageEnhance
+from automate_driver import AutomateDriver
+
+username = 'hongccoffee@163.com'
+newPassword = 'Qq123456'
 
 
 # 解析验证码图片文字
@@ -26,54 +30,42 @@ def get_code():
     return code
 
 
-class SearchTests(unittest.TestCase):
+class SeedLinkTests(unittest.TestCase):
     def setUp(self):
         # 创建一个新的浏览器对象
-        self.driver = webdriver.Chrome(
-            "D:\MyCode\Pycharm\Selenium_test\chromedriver\chromedriver.exe")
-        self.driver.implicitly_wait(30)
-        # 最大化窗口
-        # self.driver.maximize_window()
+        self.autoDriver = AutomateDriver()
 
-        self.driver.get('https://demo.app.seedlinktech.com/drago/position/3870/')
+    def tearDown(self):
+        # 关闭浏览器对象
+        self.autoDriver.quitBrowser()
+        pass
 
     def test_01_Sign_in(self):
+        # 打开网页
+        self.autoDriver.navigate('https://demo.app.seedlinktech.com/drago/position/3870/')
+        print()
         print("注册测试开始")
-        self.driver.find_element_by_link_text("开始").click()
-        # 用name定位用户文本输入框
-        self.account_field = self.driver.find_element_by_id('sign-up-user-name')
-        # 用name定位密码文本输入框
-        self.captcha_field = self.driver.find_element_by_id('id_captcha_1')
-        self.account_field.clear()
-        self.captcha_field.clear()
-        self.driver.implicitly_wait(30)
-
-        # 输入用户名demo
-        username = 'hongccoffee@163.com'
-        self.account_field.send_keys(username)
-        # 输入密码
-        self.captcha_field.send_keys(input("输入正确的验证码："))
+        self.autoDriver.click('link_text,开始')
+        # 输入用户名
+        self.autoDriver.type('id,sign-up-user-name', username)
+        # 输入验证码
+        self.autoDriver.type('id,id_captcha_1', input("输入正确的验证码："))
         # 使用js去点击勾选我已阅读并同意相关
         js = "$('#privacy').click();"
-        self.driver.execute_script(js)
-        self.driver.implicitly_wait(30)
-
+        self.autoDriver.executeJs(js)
         time.sleep(1)
         # 点击下一步
-        self.driver.find_element_by_id('login-next').click()
-
+        self.autoDriver.click('id,login-next')
         # 手机或邮箱格式不对
-        error_info = self.driver.find_element_by_id('sign-up-invalid-user-name').text
+        error_info = self.autoDriver.getText('id,sign-up-invalid-user-name')
         print(error_info)
         while error_info == "请输入手机或邮箱":
-            self.account_field.clear()
-            username = input("输入正确的手机或邮箱：")
-            self.account_field.send_keys(username)
+            self.autoDriver.type('id,sign-up-user-name', input("输入正确的手机或邮箱："))
             time.sleep(1)
-            self.driver.find_element_by_id('login-next').click()
-            error_info = self.driver.find_element_by_id('sign-up-invalid-user-name').text
+            self.autoDriver.click('id,login-next')
+            error_info = self.autoDriver.getText('id,sign-up-invalid-user-name')
         # 验证码不对
-        error_info = self.driver.find_element_by_id('sign-up-invalid-captcha').text
+        error_info = self.autoDriver.getText('id,sign-up-invalid-captcha')
         while error_info == "请正确输入图中文字或点击图片换一张":
             # ---------------ocr 识别验证码-----------------
             # print("验证码不对")
@@ -84,145 +76,128 @@ class SearchTests(unittest.TestCase):
             # print(code)
             # ---------------------------------------------
             # ocr 识别率莫名极低 这里用手动输入
-            self.captcha_field.clear()
-            self.captcha_field.send_keys(input("输入正确的验证码："))
+            self.autoDriver.type('id,id_captcha_1', input("输入正确的验证码："))
             time.sleep(1)
-            self.driver.find_element_by_id('login-next').click()
+            self.autoDriver.click('id,login-next')
             error_info = 0
             time.sleep(1)
-            error_info = self.driver.find_element_by_id('sign-up-invalid-captcha').text
-        # 验证填写注册表单的url,没有直接注册的链接,首次登录就是填写个人信息，不管成功与否，二次登录只有忘记密码，这里为了方便就只写了忘记密码相关代码
-        currUrl = self.driver.current_url
+            error_info = self.autoDriver.getText('id,sign-up-invalid-captcha')
+        # 验证填写注册表单的url,没有直接注册的链接,首次登录就是填写个人信息，不管成功与否，二次登录只有忘记密码.
+        # 这里为了方便就只写了忘记密码相关代码
+        currUrl = self.autoDriver.getUrl()
         if currUrl == "https://demo.app.seedlinktech.com/drago/answer/basic/?pid=3870":
             print("进入注册表单页面")
         elif currUrl == "https://demo.app.seedlinktech.com/drago/candidate/login/?next=/drago" \
                         "/answer" \
                         "/basic/&pid=3870&login=true":
             print("进入忘记密码页面")
-            self.driver.find_element_by_partial_link_text("忘记密码").click()
+            self.autoDriver.click('link_text,忘记密码')
             # 填写帐号
-            self_username_field = self.driver.find_element_by_id('userName')
-            self_username_field.send_keys(username)
+            self.autoDriver.type('id,userName', username)
             # 点击获取验证码
-            self.driver.find_element_by_id('codeBtn').click()
-            # 验证码图片
-            self_captcha_field = self.driver.find_element_by_id('id_captcha_1')
-            self_captcha_field.clear()
-            self_captcha_field.send_keys(input("输入正确的验证码："))
+            self.autoDriver.click('id,codeBtn')
             # 填写新密码
-            newpassword = 'Qq123456'
-            self_newpassword_field = self.driver.find_element_by_id('new-password')
-            self_newpassword_field.send_keys(newpassword)
-            self_againpassword_field = self.driver.find_element_by_id('again-password')
-            self_againpassword_field.send_keys(newpassword)
+            self.autoDriver.type('id,new-password', newPassword)
+            self.autoDriver.type('id,again-password', newPassword)
             # 填写短信验证码
-            self_code02_field = self.driver.find_element_by_id('code02')
-            self_code02_field.send_keys(input("短信验证码："))
-
+            self.autoDriver.type('id,code02', input("短信验证码："))
+            time.sleep(1)
+            # 验证码图片
+            self.autoDriver.type('id,id_captcha_1', input("输入验证码图片："))
+            time.sleep(1)
             # 点击重置密码
-            # time.sleep(1)
-            self.driver.find_element_by_id('reset').click()
-            self.driver.implicitly_wait(10)
-            # 检测输入数据是否合法
-            error_info = self.driver.find_elements_by_xpath("//div[@role='info']")
+            self.autoDriver.click('id,reset')
+            # 检测输入数据是否合法,一执行重置密码就会更换验证码图片，手动输入时没有问题
+            error_info = self.autoDriver.getElements('xpath,//div[@role="info"]')
             flag = 1
             while flag == 1:
                 flag = 0
                 for i in error_info:
-                    if i.text == "请正确输入图中文字或点击图片换一张":
-                        self_captcha_field.clear()
-                        self_captcha_field.send_keys(input("输入验证码图片文字~~："))
-                        flag = 1
                     if i.text == "请检查验证码":
-                        self_code02_field.clear()
-                        self_code02_field.send_keys(input("短信验证码："))
+                        self.autoDriver.type('id,code02', input("短信验证码："))
                         flag = 1
                     if i.text == "您的密码长度须在8到20位之间，并至少包含以下4种类型中的3种：英文大写、英文小写、数字及符号。":
-                        newpassword = input("重新输入新密码：")
                         flag = 1
-                        self_newpassword_field.clear()
-                        self_newpassword_field.send_keys(newpassword)
-                        self_againpassword_field.clear()
-                        self_againpassword_field.send_keys(newpassword)
-                time.sleep(1)
-                self.driver.find_element_by_id('reset').click()
-                self.driver.implicitly_wait(30)
-                # 查看是否有修改成功字样 TODO:第一次正确输入图片验证码时会弹出验证码错，手工输入没有，未能解决
-                yes = self.driver.find_element_by_class_name('success').is_enabled()
-                print(yes)
-                if yes:
-                    break
-
-            # 注册成功有3秒延迟跳转，略过
-            print("跳转中")
+                        pass
+                    if i.text == "请正确输入图中文字或点击图片换一张":
+                        flag = 1
+                        self.autoDriver.type('id,id_captcha_1', input("输入验证码图片："))
+                if flag == 1:
+                    time.sleep(5)  # 略过上一次的错误信息
+                    self.autoDriver.click('id,reset')
+                    time.sleep(1)
+                    error_info = self.autoDriver.getElements('xpath,//div[@role="info"]')
+            time.sleep(2)
+            yes = self.autoDriver.getDisplay('class_name,success')
+            yes = self.autoDriver.getDisplay('class_name,success')
             time.sleep(1)
-            currUrl = self.driver.current_url
-            print(currUrl)
-            if currUrl == "https://demo.app.seedlinktech.com/drago/candidate/reset/password/?from=jobseeker&pid=3870":
-                print("注册成功1")
-            elif currUrl == "https://demo.app.seedlinktech.com/drago/candidate/login/?signup=true":
-                print("注册成功2")
+            if yes:
+                print("注册成功")
+                time.sleep(3)
+            else:
+                print("没成功")
         else:
             print("urlerror")
-
         time.sleep(1)
         print("注册测试结束")
+
+    def test_02_Log_in(self):
+        # 打开网页
+        self.autoDriver.navigate(
+            'https://demo.app.seedlinktech.com/drago/candidate/login/?signup=true')
+        print()
         print("登录测试开始")
         # 主页面
-        currUrl = self.driver.current_url
+        currUrl = self.autoDriver.getUrl()
         print(currUrl)
-        if currUrl == "https://demo.app.seedlinktech.com/drago/candidate/login/?signup=true" or \
-                        currUrl == "https://demo.app.seedlinktech.com/drago/candidate/reset/password/?from=jobseeker&pid=3870":
-            self.account_field = self.driver.find_element_by_id('sign-up-user-name')
-            self.account_field.send_keys(username)
-            self.captcha_field = self.driver.find_element_by_id('id_captcha_1')
-            self.captcha_field.send_keys(input("输入正确的验证码："))
+        if currUrl == "https://demo.app.seedlinktech.com/drago/candidate/login/?signup=true":
+            # 填写用户名
+            self.autoDriver.type('id,sign-up-user-name', username)
+            # 填写验证码
+            self.autoDriver.type('id,id_captcha_1', input("输入正确的验证码："))
+            # 执行js
             js = "$('#privacy').click();"
-            self.driver.execute_script(js)
-            self.driver.implicitly_wait(30)
+            self.autoDriver.executeJs(js)
             time.sleep(1)
             # 点击下一步
-            self.driver.find_element_by_id('login-next').click()
-            error_info = self.driver.find_element_by_id('sign-up-invalid-captcha').text
+            self.autoDriver.click('id,login-next')
+            time.sleep(1)
+            # 获取错误信息
+            error_info = self.autoDriver.getText('id,sign-up-invalid-captcha')
             while error_info == "请正确输入图中文字或点击图片换一张":
-                self.captcha_field.clear()
-                self.captcha_field.send_keys(input("输入正确的验证码："))
+                self.autoDriver.type('id,id_captcha_1', input("重新输入正确的验证码："))
                 time.sleep(1)
-                self.driver.find_element_by_id('login-next').click()
+                self.autoDriver.click('id,login-next')
+                time.sleep(1)
                 error_info = 0
-                time.sleep(1)
-                error_info = self.driver.find_element_by_id('sign-up-invalid-captcha').text
+                error_info = self.autoDriver.getText('id,sign-up-invalid-captcha')
         # 登录页面
         time.sleep(1)
-        currUrl = self.driver.current_url
+        currUrl = self.autoDriver.getUrl()
         print(currUrl)
         if currUrl == "https://demo.app.seedlinktech.com/drago/candidate/login/?login=true":
-            self.password_field = self.driver.find_element_by_id('log-in-password')
-            self.password_field.clear()
-            self.password_field.send_keys(newpassword)
-            self.driver.implicitly_wait(30)
-            self.driver.find_element_by_xpath("//button[@type='submit']").click()
+            # 填写密码
+            self.autoDriver.type('id,log-in-password', newPassword)
             time.sleep(1)
-            # 本想用url验证登录，但获取到的url和浏览器的url不一致，也不知道原因
-            # currUrl = self.driver.current_url
-            # print(currUrl)
-            # if currUrl == "https://demo.app.seedlinktech.com/drago/":
-            #     print("登录成功")
-            # else:
-            #     print("登录失败")
-            #用页面存在的元素验证是否登录成功
-            self.myinfo_field = self.driver.find_element_by_xpath('//div[@role="user-avatar"]')
-            if self.myinfo_field.is_enabled():
-                print("登录成功")
-            else:
-                print("登录失败")
+            # 提交
+            self.autoDriver.click('xpath,//button[@type="submit"]')
+            time.sleep(1)
+        # 本想用url验证登录，但获取到的url和浏览器的url不一致，也不知道原因
+        # currUrl = self.autoDriver.getUrl()
+        # print(currUrl)
+        # if currUrl == "https://demo.app.seedlinktech.com/drago/":
+        #     print("登录成功")
+        # else:
+        #     print("登录失败")
+        # 用页面存在的元素验证是否登录成功
+        time.sleep(3)
+        self.myinfo_field = self.autoDriver.getElement('xpath,//*[@data-item-type="menu"]')
+        if self.myinfo_field.is_enabled():
+            print("登录成功")
+        else:
+            print("登录失败")
+        time.sleep(3)
         print("登录测试结束")
-        time.sleep(10)
-
-    def tearDown(self):
-        # 关闭浏览器对象
-        self.driver.quit()
-        pass
 
 
 if __name__ == '__main__':
